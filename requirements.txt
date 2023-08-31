@@ -5,3 +5,4 @@ uuid
 pytest
 psycopg2-binary
 python-dotenv
+alembic
