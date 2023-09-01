@@ -2,7 +2,7 @@ from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
-
+import os
 from alembic import context
 
 # this is the Alembic Config object, which provides
@@ -20,6 +20,7 @@ from app.models import base
 target_metadata = base.metadata
 #target_metadata = None
 
+config.set_main_option('sqlalchemy.url', os.environ['DATABASE_URL'])
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
