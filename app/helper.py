@@ -18,16 +18,22 @@ def token_required(f):
             return jsonify({'message': 'a valid token is missing'}), 401
         try:
             data = jwt.decode(token, secret, algorithms=["HS256"])
-            current_user = db.query(Users).filter_by(name=data['username']).first()
+            user = db.query(Users).filter_by(name=data['username']).first()
+            if user is None:
+                raise
         except jwt.ExpiredSignatureError:
-            return jsonify({'message': 'token is expired'}), 401
+            data = jwt.decode(token, secret, algorithms=["HS256"], options={"verify_signature": False})
+            user = db.query(Users).filter_by(name=data['username']).first()
+            if user is None:
+                raise
+            new_token = gen_token(user.name)
+            return jsonify({'message': 'token is expired', 'new_token': new_token}), 401
         except Exception as e:
             print(e)
             return jsonify({'message': 'token is invalid'}), 401
-        return f(current_user, *args, **kwargs)
+        return f(user, *args, **kwargs)
     return decorator
 
-def gen_token(user_name, user_password, auth_password):
-    if check_password_hash(user_password, auth_password):
-        return jwt.encode({'username' : user_name, 'exp' : datetime.datetime.utcnow() + datetime.timedelta(minutes=45)}, secret, "HS256")
-    return None
+def gen_token(user_name):
+    return jwt.encode({'username' : user_name, 'exp' : datetime.datetime.utcnow() + datetime.timedelta(minutes=45)}, secret, "HS256")
+

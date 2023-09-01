@@ -36,24 +36,31 @@ def login_user():
         return jsonify({'message': 'user must have "username" and "password".'}), 400
     
     user = db.query(Users).filter_by(name=auth['username']).first()    
-    token = gen_token(user.name, user.password, auth['password'])
-    if token is not None:
+    if user is not None and check_password_hash(user.password, auth['password']):
+        token = gen_token(user.name)
         return jsonify({'token' : token}) 
     return make_response('could not verify',  401, {'Authentication': '"login required"'})
 
-@app.route('/users/<username>', methods=['GET'])
+@app.route('/users', methods=['GET'])
 @token_required
-def get_user(user, username):  
-    req_user = db.query(Users).filter_by(name=username).limit(1).first()
-    if req_user is None or req_user.name != user.name:
-        return jsonify({'message': 'user is not yours.'}), 400
-
+def get_user(user):  
     user_data = {}   
     user_data['username'] = user.name
     user_data['public_id'] = user.public_id
     user_data['events'] = [{'event_id': event.id} for event in db.query(Events).filter_by(author_id=user.id)] 
-    user_data['tickets'] = [{'event_id': ticket.event_id, 'is_paid': ticket.is_paid} for ticket in db.query(Tickets).filter_by(buyer_id=user.id)]
+    user_data['tickets'] = [{'ticket_id': ticket.id} for ticket in db.query(Tickets).filter_by(buyer_id=user.id)]
     return jsonify({'user': user_data})
+
+@app.route('/users', methods=['DELETE'])
+@token_required
+def delete_user(user):  
+    try:
+        db.delete(user)  
+        db.commit()    
+        return jsonify({'message': 'user deleted successfully'}), 200
+    except Exception as e:
+        print(e)
+        return jsonify({'message': 'somthing went wrong.'}), 500
 
 @app.route('/tickets/<ticket_id>', methods=['GET'])
 @token_required
@@ -68,6 +75,21 @@ def get_ticket(user, ticket_id):
     ticket_data['is_paid'] = ticket.is_paid
     return jsonify({'ticket': ticket_data})
 
+@app.route('/tickets/<ticket_id>', methods=['DELETE'])
+@token_required
+def delete_ticket(user, ticket_id):  
+    ticket = db.query(Tickets).filter_by(id=ticket_id).limit(1).first()
+    if ticket is None:
+        return jsonify({'message': 'ticket does not exists.'}), 404
+    if ticket.buyer_id != user.id:
+        return jsonify({'message': 'ticket is not yours.'}), 400
+    try:
+        db.delete(ticket)  
+        db.commit()    
+        return jsonify({'message': 'ticket deleted successfully'}), 200
+    except Exception as e:
+        print(e)
+        return jsonify({'message': 'somthing went wrong.'}), 500
 
 @app.route('/tickets/<ticket_id>', methods=['PUT'])
 @token_required
@@ -103,7 +125,7 @@ def create_ticket(user):
         db.add(new_ticket)  
         db.commit()    
         db.flush()
-        return jsonify({'message': 'ticket created successfully', 'event_id': new_ticket.id}), 201
+        return jsonify({'message': 'ticket created successfully', 'ticket_id': new_ticket.id}), 201
     except Exception as e:
         print(e)
         return jsonify({'message': 'bad parameter type.'}), 400
@@ -171,7 +193,7 @@ def create_event(user):
 
 @app.route('/events/<event_id>', methods=['GET'])
 def get_one_event(event_id):  
-    event = db.query(Events).filter_by(id=event_id)
+    event = db.query(Events).filter_by(id=event_id).limit(1).first()
     if event is None:
         return jsonify({'message': 'event does not exists.'}), 404
     event_data = {}   
