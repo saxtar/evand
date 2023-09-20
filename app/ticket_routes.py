@@ -7,28 +7,40 @@ from .helper import token_required
 app = Blueprint('ticket_routes_blueprint', __name__)
 
 
+def validate_ticket_data(data):
+    if not all(k in data for k in ('event_id', 'price', 'desc', 'date', 'remaining')):
+        return (jsonify({'message': 'ticket must have "event_id", "price", "desc", "date", "remaining".'}), 400)
+    event = db.query(Events).filter_by(id=data['event_id']).limit(1).first()   
+    if event is None:
+        return (jsonify({'message': 'event does not exists.'}), 404)
+    return None
+
+
+def authorize_ticket(user, ticket_id):
+    ticket = db.query(Tickets).filter_by(id=ticket_id).limit(1).first()
+    if ticket is None:
+        return (jsonify({'message': 'ticket does not exists.'}), 404)
+    if ticket.buyer_id != user.id:
+        return (jsonify({'message': 'ticket is not yours.'}), 400)
+    return None
+
+
 @app.route('/tickets/<ticket_id>', methods=['GET'])
 @token_required
 def get_ticket(user, ticket_id):  
     ticket = db.query(Tickets).filter_by(id=ticket_id, buyer_id=user.id).limit(1).first()
     if ticket is None:
         return jsonify({'message': 'ticket not found.'}), 404
-
-    ticket_data = {}   
-    ticket_data['buyer_username'] = user.name
-    ticket_data['event_id'] = ticket.event_id
-    ticket_data['is_paid'] = ticket.is_paid
-    return jsonify({'ticket': ticket_data})
+    return jsonify({'ticket': dict(ticket)})
 
 
 @app.route('/tickets/<ticket_id>', methods=['DELETE'])
 @token_required
 def delete_ticket(user, ticket_id):  
-    ticket = db.query(Tickets).filter_by(id=ticket_id).limit(1).first()
-    if ticket is None:
-        return jsonify({'message': 'ticket does not exists.'}), 404
-    if ticket.buyer_id != user.id:
-        return jsonify({'message': 'ticket is not yours.'}), 400
+    err = authorize_ticket(user, ticket_id)
+    if err is not None:
+        return err
+
     try:
         db.delete(ticket)  
         db.commit()    
@@ -60,14 +72,12 @@ def purchase_ticket(user, ticket_id):
 @app.route('/tickets', methods=['POST'])
 @token_required
 def create_ticket(user):  
-    data = request.get_json()  
-    if 'event_id' not in data:
-        return jsonify({'message': 'ticket must have "event_id".'}), 400
-    event = db.query(Events).filter_by(id=data['event_id']).limit(1).first()   
-    if event is None:
-        return jsonify({'message': 'event does not exists.'}), 404
+    data = request.get_json()
+    err = validate_ticket_data(data) 
+    if err is not None:
+        return err
     try:
-        new_ticket = Tickets(event_id=event.id, buyer_id=user.id) 
+        new_ticket = Tickets(**data) 
         db.add(new_ticket)  
         db.commit()    
         db.flush()

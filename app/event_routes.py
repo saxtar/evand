@@ -1,28 +1,49 @@
 from flask import request, jsonify, Blueprint
 from . import db
-from .models import Users, Events, Tickets
+from .models import Users, Events, Tickets, AlchemyEncoder, Categories
 from .helper import token_required
+import json
 
 
 app = Blueprint('event_routes_blueprint', __name__)
 
 
+def validate_event_data(data):
+    if 'name' not in data:
+        return (jsonify({'message': 'event must have "name".'}), 400)
+    event = db.query(Events).filter_by(name=data['name']).limit(1).first()
+    if event is not None:
+        return (jsonify({'message': 'event name already exists.'}), 400)
+    if 'categories' in data:
+        for c in data['categories']:
+            category = db.query(Categories).filter_by(name=c).first()
+            if category is None:
+                return (jsonify({'message': f'the \"{c}\" not found in categories.'}), 400)
+
+    return None
+
+
+def authorize_event(user, event_id):
+    event = db.query(Events).filter_by(id=event_id).limit(1).first()
+    if event is None:
+        return (jsonify({'message': 'event does not exists.'}), 404)
+    if event.author_id != user.id:
+        return (jsonify({'message': 'event is not yours.'}), 403)
+    return None
+
+
 @app.route('/events/<event_id>', methods=['PUT'])
 @token_required
 def update_event(user, event_id):  
-    event = db.query(Events).filter_by(id=event_id).limit(1).first()
-    if event is None:
-        return jsonify({'message': 'event does not exists.'}), 404
-    if event.author_id != user.id:
-        return jsonify({'message': 'event is not yours.'}), 400
+    err = authorize_event(user, event_id)
+    if err is not None:
+        return err
     
     data = request.get_json()  
-    if 'name' not in data or 'price' not in data:
-        return jsonify({'message': 'event must have "name" and "price".'}), 400
-
+    event = db.query(Events).filter_by(id=event_id).limit(1).first()
     try:
-        event.name = data['name']
-        event.price = data['price']
+        for k, v in data.items():
+            setattr(event, k, v)
         db.commit()    
         return jsonify({'message': 'event updated successfully'}), 200
     except Exception as e:
@@ -33,11 +54,10 @@ def update_event(user, event_id):
 @app.route('/events/<event_id>', methods=['DELETE'])
 @token_required
 def delete_event(user, event_id):  
-    event = db.query(Events).filter_by(id=event_id).limit(1).first()
-    if event is None:
-        return jsonify({'message': 'event does not exists.'}), 404
-    if event.author_id != user.id:
-        return jsonify({'message': 'event is not yours.'}), 400
+    err = authorize_event(user, event_id)
+    if err is not None:
+        reutrn *err
+    
     try:
         db.delete(event)  
         db.commit()    
@@ -51,13 +71,17 @@ def delete_event(user, event_id):
 @token_required
 def create_event(user):  
     data = request.get_json()  
-    if 'name' not in data or 'price' not in data:
-        return jsonify({'message': 'event must have "name" and "price".'}), 400
-    event = db.query(Events).filter_by(name=data['name']).limit(1).first()   
-    if event is not None:
-        return jsonify({'message': 'event already exists.'}), 400
+    err = validate_event_data(data)
+    if err is not None:
+        return err    
+    
     try:
-        new_event = Events(name=data['name'], price=data['price'], author_id=user.id) 
+        if 'categories' in data:
+            categories = data.pop('categories')
+            category_list = [db.query(Categories).filter_by(name=c).first() for c in categories]
+            data['categories'] = category_list
+        new_event = Events(**data) 
+        new_event.author_id = user.id
         db.add(new_event)  
         db.commit()    
         db.flush()
@@ -72,23 +96,15 @@ def get_one_event(event_id):
     event = db.query(Events).filter_by(id=event_id).limit(1).first()
     if event is None:
         return jsonify({'message': 'event does not exists.'}), 404
-    event_data = {}   
-    event_data['id'] = event.id
-    event_data['name'] = event.name
-    event_data['price'] = event.price
-    return jsonify({'event': event_data})
+    out = {'event': json.loads(json.dumps(event, cls=AlchemyEncoder))}
+    out['event']['tickets'] = json.loads(json.dumps(event.tickets, cls=AlchemyEncoder))
+    out['event']['categories'] = json.loads(json.dumps(event.categories, cls=AlchemyEncoder))
+    return jsonify(out)
 
 
 @app.route('/events', methods=['GET'])
 def get_all_events():  
     events = db.query(Events).all() 
-    result = []   
-    for event in events:   
-        event_data = {}   
-        event_data['id'] = event.id
-        event_data['name'] = event.name
-        event_data['price'] = event.price
-        result.append(event_data)   
-    return jsonify({'events': result})
+    return jsonify({'events': [json.loads(json.dumps(e, cls=AlchemyEncoder)) for e in events]})
 
 

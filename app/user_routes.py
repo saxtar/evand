@@ -1,6 +1,5 @@
-from flask import request, jsonify, make_response
+from flask import request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
-import uuid
 import jwt
 from functools import wraps
 from flask import Blueprint
@@ -15,13 +14,16 @@ app = Blueprint('user_routes_blueprint', __name__)
 @app.route('/register', methods=['POST'])
 def signup_user():  
     data = request.get_json()  
-    if 'password' not in data or 'username' not in data:
-        return jsonify({'message': 'user must have "username" and "password".'}), 400
-    hashed_password = generate_password_hash(data['password'], method='sha256')
-    user = db.query(Users).filter_by(name=data['username']).limit(1).first()   
+    if 'password' not in data or 'email' not in data:
+        return jsonify({'message': 'user must have "email" and "password".'}), 400
+    hashed_password = generate_password_hash(data['password'], method='scrypt')
+    user = db.query(Users).filter_by(email=data['email']).limit(1).first()   
     if user is not None:
         return jsonify({'message': 'user already exists'}), 400
-    new_user = Users(public_id=uuid.uuid4(), name=data['username'], password=hashed_password, admin=False) 
+    new_user = Users(email=data['email'], password=hashed_password, admin=False)
+    for k, v in data.items():
+        if k != 'password':
+            setattr(new_user, k, v)
     db.add(new_user)  
     db.commit()    
     return jsonify({'message': 'registeration successfully'}), 201
@@ -31,25 +33,14 @@ def signup_user():
 def login_user(): 
     auth = request.get_json()   
 
-    if not auth or 'username' not in auth or 'password' not in auth:  
-        return jsonify({'message': 'user must have "username" and "password".'}), 400
+    if not auth or 'email' not in auth or 'password' not in auth:  
+        return jsonify({'message': 'user must have "email" and "password".'}), 400
     
-    user = db.query(Users).filter_by(name=auth['username']).first()    
+    user = db.query(Users).filter_by(email=auth['email']).first()    
     if user is not None and check_password_hash(user.password, auth['password']):
-        token = gen_token(user.name)
+        token = gen_token(user.email)
         return jsonify({'token' : token}) 
-    return make_response('could not verify',  401, {'Authentication': '"login required"'})
-
-
-@app.route('/users', methods=['GET'])
-@token_required
-def get_user(user):  
-    user_data = {}   
-    user_data['username'] = user.name
-    user_data['public_id'] = user.public_id
-    user_data['events'] = [{'event_id': event.id} for event in db.query(Events).filter_by(author_id=user.id)] 
-    user_data['tickets'] = [{'ticket_id': ticket.id} for ticket in db.query(Tickets).filter_by(buyer_id=user.id)]
-    return jsonify({'user': user_data})
+    return jsonify({'message': 'could not verify'}),  401
 
 
 @app.route('/users', methods=['DELETE'])

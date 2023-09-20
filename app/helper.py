@@ -18,15 +18,15 @@ def token_required(f):
             return jsonify({'message': 'a valid token is missing'}), 401
         try:
             data = jwt.decode(token, secret, algorithms=["HS256"])
-            user = db.query(Users).filter_by(name=data['username']).first()
+            user = db.query(Users).filter_by(email=data['email']).first()
             if user is None:
                 raise
         except jwt.ExpiredSignatureError:
             data = jwt.decode(token, secret, algorithms=["HS256"], options={"verify_signature": False})
-            user = db.query(Users).filter_by(name=data['username']).first()
+            user = db.query(Users).filter_by(email=data['email']).first()
             if user is None:
                 raise
-            new_token = gen_token(user.name)
+            new_token = gen_token(user.email)
             return jsonify({'message': 'token is expired', 'new_token': new_token}), 401
         except Exception as e:
             print(e)
@@ -34,6 +34,6 @@ def token_required(f):
         return f(user, *args, **kwargs)
     return decorator
 
-def gen_token(user_name):
-    return jwt.encode({'username' : user_name, 'exp' : datetime.datetime.utcnow() + datetime.timedelta(minutes=45)}, secret, "HS256")
+def gen_token(email):
+    return jwt.encode({'email' : email, 'exp' : datetime.datetime.utcnow() + datetime.timedelta(minutes=45)}, secret, "HS256")
 
