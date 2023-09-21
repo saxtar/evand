@@ -1,7 +1,7 @@
 from flask import request, jsonify, Blueprint
 from . import db
 from .models import Events, Tickets
-from .helper import token_required
+from .helper import token_required, add_cors_headers
 
 
 app = Blueprint('ticket_routes_blueprint', __name__)
@@ -26,6 +26,7 @@ def authorize_ticket(user, ticket_id):
 
 
 @app.route('/tickets/<ticket_id>', methods=['GET'])
+@add_cors_headers
 @token_required
 def get_ticket(user, ticket_id):  
     ticket = db.query(Tickets).filter_by(id=ticket_id, buyer_id=user.id).limit(1).first()
@@ -35,6 +36,7 @@ def get_ticket(user, ticket_id):
 
 
 @app.route('/tickets/<ticket_id>', methods=['DELETE'])
+@add_cors_headers
 @token_required
 def delete_ticket(user, ticket_id):  
     err = authorize_ticket(user, ticket_id)
@@ -51,6 +53,7 @@ def delete_ticket(user, ticket_id):
 
 
 @app.route('/tickets/<ticket_id>', methods=['PUT'])
+@add_cors_headers
 @token_required
 def purchase_ticket(user, ticket_id):  
     data = request.get_json()  
@@ -70,6 +73,7 @@ def purchase_ticket(user, ticket_id):
 
 
 @app.route('/tickets', methods=['POST'])
+@add_cors_headers
 @token_required
 def create_ticket(user):  
     data = request.get_json()

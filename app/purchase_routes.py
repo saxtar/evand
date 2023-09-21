@@ -1,7 +1,7 @@
 from flask import request, jsonify, Blueprint
 from . import db
 from .models import Purchases, Tickets
-from .helper import token_required
+from .helper import token_required, add_cors_headers
 
 
 app = Blueprint('purchase_routes_blueprint', __name__)
@@ -26,6 +26,7 @@ def authorize_purchase(user, purchase_id):
 
 
 @app.route('/purchases/<purchase_id>', methods=['GET'])
+@add_cors_headers
 @token_required
 def get_purchase(user, purchase_id):  
     err = authorize_purchase(user, purchase_id)
@@ -37,6 +38,7 @@ def get_purchase(user, purchase_id):
 
 
 @app.route('/purchases/<purchase_id>', methods=['DELETE'])
+@add_cors_headers
 @token_required
 def delete_purchase(user, purchase_id):  
     err = authorize_purchase(user, purchase_id)
@@ -54,6 +56,7 @@ def delete_purchase(user, purchase_id):
 
 
 @app.route('/purchases/<purchase_id>', methods=['PUT'])
+@add_cors_headers
 @token_required
 def pay_purchase(user, purchase_id):  
     data = request.get_json()  
@@ -77,6 +80,7 @@ def pay_purchase(user, purchase_id):
 
 
 @app.route('/purchases', methods=['POST'])
+@add_cors_headers
 @token_required
 def create_purchase(user):  
     data = request.get_json()

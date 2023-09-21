@@ -5,13 +5,14 @@ from functools import wraps
 from flask import Blueprint
 from . import db
 from .models import Users, Events, Tickets
-from .helper import token_required, gen_token
+from .helper import token_required, gen_token, add_cors_headers
 
 
 app = Blueprint('user_routes_blueprint', __name__)
 
 
 @app.route('/register', methods=['POST'])
+@add_cors_headers
 def signup_user():  
     data = request.get_json()  
     if 'password' not in data or 'email' not in data:
@@ -30,6 +31,7 @@ def signup_user():
 
 
 @app.route('/login', methods=['POST'])  
+@add_cors_headers
 def login_user(): 
     auth = request.get_json()   
 
@@ -44,6 +46,7 @@ def login_user():
 
 
 @app.route('/users', methods=['DELETE'])
+@add_cors_headers
 @token_required
 def delete_user(user):  
     try:

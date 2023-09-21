@@ -1,7 +1,7 @@
 from flask import request, jsonify, Blueprint
 from . import db
 from .models import Users, Events, Tickets, AlchemyEncoder, Categories
-from .helper import token_required
+from .helper import token_required, add_cors_headers
 import json
 
 
@@ -33,6 +33,7 @@ def authorize_event(user, event_id):
 
 
 @app.route('/events/<event_id>', methods=['PUT'])
+@add_cors_headers
 @token_required
 def update_event(user, event_id):  
     err = authorize_event(user, event_id)
@@ -52,6 +53,7 @@ def update_event(user, event_id):
 
 
 @app.route('/events/<event_id>', methods=['DELETE'])
+@add_cors_headers
 @token_required
 def delete_event(user, event_id):  
     err = authorize_event(user, event_id)
@@ -68,6 +70,7 @@ def delete_event(user, event_id):
 
 
 @app.route('/events', methods=['POST'])
+@add_cors_headers
 @token_required
 def create_event(user):  
     data = request.get_json()  
@@ -92,6 +95,7 @@ def create_event(user):
 
 
 @app.route('/events/<event_id>', methods=['GET'])
+@add_cors_headers
 def get_one_event(event_id):  
     event = db.query(Events).filter_by(id=event_id).limit(1).first()
     if event is None:

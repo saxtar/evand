@@ -37,3 +37,13 @@ def token_required(f):
 def gen_token(email):
     return jwt.encode({'email' : email, 'exp' : datetime.datetime.utcnow() + datetime.timedelta(minutes=45)}, secret, "HS256")
 
+
+def add_cors_headers(f):
+    @wraps(f)
+    def decorator(*args, **kwargs):
+        resp = f(*args, **kwargs)
+        resp.headers.add("Access-Control-Allow-Origin", "*")
+        resp.headers.add("Access-Control-Allow-Headers", "*")
+        resp.headers.add("Access-Control-Allow-Methods", "*")
+        return resp
+    return decorator

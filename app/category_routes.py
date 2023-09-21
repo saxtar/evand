@@ -1,7 +1,7 @@
 from flask import request, jsonify, Blueprint
 from . import db
 from .models import Categories
-from .helper import token_required
+from .helper import token_required, add_cors_headers
 
 
 app = Blueprint('category_routes_blueprint', __name__)
@@ -26,12 +26,14 @@ def authorize_categpry(user, category_name):
 
 
 @app.route('/categories', methods=['GET'])
+@add_cors_headers
 def get_categories():  
     categories = db.query(Categories).all()
     return jsonify([category.name for category in categories])
 
 
 @app.route('/categories/<category_name>', methods=['DELETE'])
+@add_cors_headers
 @token_required
 def delete_category(user, category_name):  
     err = authorize_category(user, category_name)
@@ -49,6 +51,7 @@ def delete_category(user, category_name):
 
 
 @app.route('/categories/<category_name>', methods=['PUT'])
+@add_cors_headers
 @token_required
 def edit_category(user, category_name):  
     data = request.get_json()  
@@ -71,6 +74,7 @@ def edit_category(user, category_name):
 
 
 @app.route('/categories', methods=['POST'])
+@add_cors_headers
 @token_required
 def create_category(user):  
     data = request.get_json()
