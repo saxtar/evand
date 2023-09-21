@@ -19,10 +19,12 @@ def create_app(config=None):
     from .event_routes import app as event_routes_app
     from .purchase_routes import app as purchase_routes_app
     from .category_routes import app as category_routes_app
+    from .file_routes import app as file_routes_app
     app.register_blueprint(user_routes_app)
     app.register_blueprint(ticket_routes_app)
     app.register_blueprint(event_routes_app)
     app.register_blueprint(category_routes_app)
     app.register_blueprint(purchase_routes_app)
+    app.register_blueprint(file_routes_app)
     return app
 
