@@ -29,7 +29,7 @@ def authorize_categpry(user, category_name):
 @add_cors_headers
 def get_categories():  
     categories = db.query(Categories).all()
-    return jsonify([category.name for category in categories])
+    return jsonify([category.name for category in categories]), 200
 
 
 @app.route('/categories/<category_name>', methods=['DELETE'])
