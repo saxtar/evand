@@ -43,6 +43,10 @@ def update_event(user, event_id):
     data = request.get_json()  
     event = db.query(Events).filter_by(id=event_id).limit(1).first()
     try:
+        if 'categories' in data:
+            categories = data.pop('categories')
+            category_list = [db.query(Categories).filter_by(name=c).first() for c in categories]
+            data['categories'] = category_list
         for k, v in data.items():
             setattr(event, k, v)
         db.commit()    

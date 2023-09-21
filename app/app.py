@@ -2,7 +2,6 @@ import os
 from flask import Flask
 from . import init
 from dotenv import load_dotenv, find_dotenv
-from flask_cors import CORS, cross_origin
 
 def create_app(config=None):
     load_dotenv(find_dotenv())
@@ -10,8 +9,6 @@ def create_app(config=None):
     if config is None:
         config = os.environ['APP_SETTINGS']
     app.config.from_object(config)
-    cors = CORS(app)
-    app.config['CORS_HEADERS'] = 'Content-Type'
     init(app)
     os.system('alembic upgrade head')
     from .user_routes import app as user_routes_app
