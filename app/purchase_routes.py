@@ -34,7 +34,7 @@ def get_purchase(user, purchase_id):
         return err
     
     purchase = db.query(Purchases).filter_by(id=purchase_id, buyer_id=user.id).limit(1).first()
-    return jsonify({'ticket': purchase})
+    return jsonify({'ticket': purchase}), 200
 
 
 @app.route('/purchases/<purchase_id>', methods=['DELETE'])

@@ -41,7 +41,7 @@ def login_user():
     user = db.query(Users).filter_by(email=auth['email']).first()    
     if user is not None and check_password_hash(user.password, auth['password']):
         token = gen_token(user.email)
-        return jsonify({'token' : token}) 
+        return jsonify({'token' : token}), 401
     return jsonify({'message': 'could not verify'}),  401
 
 

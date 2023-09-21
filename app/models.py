@@ -27,12 +27,14 @@ class Events(base):
     __tablename__ = 'events'
     id = Column(Integer, primary_key=True)
     name = Column(String(50), nullable=False)
-    desc = Column(String(250))
+    desc = Column(String(10000))
     banner = Column(String(1000))
     location = Column(String(1000))
     tags = Column(String(250))
     start_date = Column(String(250))
     end_date = Column(String(250))
+    city = Column(String(250))
+    event_type = Column(String(250))
     author_id = Column(
         Integer,
         ForeignKey('users.id', ondelete='CASCADE'),

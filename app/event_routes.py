@@ -38,7 +38,7 @@ def authorize_event(user, event_id):
 def update_event(user, event_id):  
     err = authorize_event(user, event_id)
     if err is not None:
-        return err
+        return err[0], err[1]
     
     data = request.get_json()  
     event = db.query(Events).filter_by(id=event_id).limit(1).first()
@@ -58,7 +58,7 @@ def update_event(user, event_id):
 def delete_event(user, event_id):  
     err = authorize_event(user, event_id)
     if err is not None:
-        reutrn *err
+        return err[0], err[1]
     
     try:
         db.delete(event)  
@@ -76,7 +76,7 @@ def create_event(user):
     data = request.get_json()  
     err = validate_event_data(data)
     if err is not None:
-        return err    
+        return err[0], err[1]
     
     try:
         if 'categories' in data:
@@ -103,12 +103,12 @@ def get_one_event(event_id):
     out = {'event': json.loads(json.dumps(event, cls=AlchemyEncoder))}
     out['event']['tickets'] = json.loads(json.dumps(event.tickets, cls=AlchemyEncoder))
     out['event']['categories'] = json.loads(json.dumps(event.categories, cls=AlchemyEncoder))
-    return jsonify(out)
+    return jsonify(out), 200
 
 
 @app.route('/events', methods=['GET'])
 def get_all_events():  
     events = db.query(Events).all() 
-    return jsonify({'events': [json.loads(json.dumps(e, cls=AlchemyEncoder)) for e in events]})
+    return jsonify({'events': [json.loads(json.dumps(e, cls=AlchemyEncoder)) for e in events]}), 200
 
 

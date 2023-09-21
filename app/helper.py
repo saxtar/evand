@@ -41,9 +41,9 @@ def gen_token(email):
 def add_cors_headers(f):
     @wraps(f)
     def decorator(*args, **kwargs):
-        resp = f(*args, **kwargs)
+        resp, status = f(*args, **kwargs)
         resp.headers.add("Access-Control-Allow-Origin", "*")
         resp.headers.add("Access-Control-Allow-Headers", "*")
         resp.headers.add("Access-Control-Allow-Methods", "*")
-        return resp
+        return resp, status
     return decorator
