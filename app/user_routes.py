@@ -4,8 +4,9 @@ import jwt
 from functools import wraps
 from flask import Blueprint
 from . import db
-from .models import Users, Events, Tickets
+from .models import Users, Events, Tickets, AlchemyEncoder
 from .helper import token_required, gen_token, add_cors_headers
+import json
 
 
 app = Blueprint('user_routes_blueprint', __name__)
@@ -56,4 +57,16 @@ def delete_user(user):
     except Exception as e:
         print(e)
         return jsonify({'message': 'somthing went wrong.'}), 500
+
+@app.route('/users/<user_id>', methods=['GET'])
+@add_cors_headers
+def get_one_event(user_id):  
+    user = db.query(Users).filter_by(id=user_id).limit(1).first()
+    if user is None:
+        return jsonify({'message': 'user does not exists.'}), 404
+    out = {'user': json.loads(json.dumps(user, cls=AlchemyEncoder))}
+    out['user'].pop('password')
+    #out['user']['purchases'] = json.loads(json.dumps(user.purchases, cls=AlchemyEncoder))
+    #out['user']['events'] = json.loads(json.dumps(user.events, cls=AlchemyEncoder))
+    return jsonify(out), 200
 
