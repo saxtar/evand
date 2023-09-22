@@ -113,11 +113,18 @@ def get_one_event(event_id):
 @app.route('/events', methods=['GET'])
 def get_all_events():  
     tags = request.args.get('tags')
+    search = request.args.get('search')
     events = None
-    if tags is None:
+    if tags is None and search is None:
         events = db.query(Events).all() 
-    else:
+    elif tags is not None:
         events = db.query(Events).filter(Events.tags.contains(tags))
-    return jsonify({'events': [json.loads(json.dumps(e, cls=AlchemyEncoder)) for e in events]}), 200
-
+    else:
+        events = db.query(Events).filter(Events.name.contains(search))
+    event_list = []
+    for e in events:
+        new_e = json.loads(json.dumps(e, cls=AlchemyEncoder))
+        new_e['tickets'] = json.loads(json.dumps(event.tickets, cls=AlchemyEncoder))
+        event_list.append(new_e)
+    return jsonify({'events': event_list}), 200
 

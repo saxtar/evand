@@ -60,7 +60,7 @@ def delete_user(user):
 
 @app.route('/users/<user_id>', methods=['GET'])
 @add_cors_headers
-def get_one_event(user_id):  
+def get_user(user_id):  
     user = db.query(Users).filter_by(id=user_id).limit(1).first()
     if user is None:
         return jsonify({'message': 'user does not exists.'}), 404
