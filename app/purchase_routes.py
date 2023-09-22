@@ -34,7 +34,15 @@ def get_purchase(user, purchase_id):
         return err
     
     purchase = db.query(Purchases).filter_by(id=purchase_id, buyer_id=user.id).limit(1).first()
-    return jsonify({'ticket': purchase}), 200
+    return jsonify({'purchase': purchase}), 200
+
+
+@app.route('/purchases', methods=['GET'])
+@add_cors_headers
+@token_required
+def get_user_purchases(user):  
+    purchases = db.query(Purchases).filter_by(buyer_id=user.id).all()
+    return jsonify({'purchases': purchases}), 200
 
 
 @app.route('/purchases/<purchase_id>', methods=['DELETE'])
