@@ -29,7 +29,7 @@ def authorize_ticket(user, ticket_id):
 @add_cors_headers
 @token_required
 def get_ticket(user, ticket_id):  
-    ticket = db.query(Tickets).filter_by(id=ticket_id, buyer_id=user.id).limit(1).first()
+    ticket = db.query(Tickets).filter_by(id=ticket_id).limit(1).first()
     if ticket is None:
         return jsonify({'message': 'ticket not found.'}), 404
     return jsonify({'ticket': dict(ticket)})
