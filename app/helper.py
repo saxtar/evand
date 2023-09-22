@@ -20,12 +20,12 @@ def token_required(f):
             data = jwt.decode(token, secret, algorithms=["HS256"])
             user = db.query(Users).filter_by(email=data['email']).first()
             if user is None:
-                raise
+                return jsonify({'message': 'token is invalid'}), 401
         except jwt.ExpiredSignatureError:
             data = jwt.decode(token, secret, algorithms=["HS256"], options={"verify_signature": False})
             user = db.query(Users).filter_by(email=data['email']).first()
             if user is None:
-                raise
+                return jsonify({'message': 'token is invalid'}), 401
             new_token = gen_token(user.email)
             return jsonify({'message': 'token is expired', 'new_token': new_token}), 401
         except Exception as e:

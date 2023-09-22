@@ -124,7 +124,7 @@ def get_all_events():
     event_list = []
     for e in events:
         new_e = json.loads(json.dumps(e, cls=AlchemyEncoder))
-        new_e['tickets'] = json.loads(json.dumps(event.tickets, cls=AlchemyEncoder))
+        new_e['tickets'] = json.loads(json.dumps(e.tickets, cls=AlchemyEncoder))
         event_list.append(new_e)
     return jsonify({'events': event_list}), 200
 
