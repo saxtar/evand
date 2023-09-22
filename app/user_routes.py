@@ -70,6 +70,15 @@ def get_user(user_id):
     return jsonify(out), 200
 
 
+@app.route('/users/me', methods=['GET'])
+@add_cors_headers
+@token_required
+def get_me(user):  
+    out = {'user': json.loads(json.dumps(user, cls=AlchemyEncoder))}
+    out['user'].pop('password')
+    return jsonify(out), 200
+
+
 @app.route('/users/<user_id>', methods=['PUT'])
 @add_cors_headers
 @token_required

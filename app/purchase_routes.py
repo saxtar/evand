@@ -1,15 +1,18 @@
 from flask import request, jsonify, Blueprint
 from . import db
-from .models import Purchases, Tickets
+from .models import Purchases, Tickets, AlchemyEncoder
 from .helper import token_required, add_cors_headers
+import json
 
 
 app = Blueprint('purchase_routes_blueprint', __name__)
 
 
 def validate_purchase_data(data):
-    if not all(k in data for k in ('ticket_id')):
+    if 'ticket_id' not in data:
         return (jsonify({'message': 'purchase must have "ticket_id".'}), 400)
+    if 'is_paid' in data:
+        return (jsonify({'message': 'invalid data".'}), 400)
     ticket = db.query(Tickets).filter_by(id=data['ticket_id']).limit(1).first()   
     if ticket is None:
         return (jsonify({'message': 'ticket does not exists.'}), 404)
@@ -42,7 +45,8 @@ def get_purchase(user, purchase_id):
 @token_required
 def get_user_purchases(user):  
     purchases = db.query(Purchases).filter_by(buyer_id=user.id).all()
-    return jsonify({'purchases': purchases}), 200
+    out = {'purchases': [json.loads(json.dumps(p, cls=AlchemyEncoder)) for p in purchases]}
+    return jsonify(out), 200
 
 
 @app.route('/purchases/<purchase_id>', methods=['DELETE'])
@@ -96,7 +100,7 @@ def create_purchase(user):
     if err is not None:
         return err
     try:
-        new_purchase = Purchases(**data) 
+        new_purchase = Purchases(**data, buyer_id=user.id) 
         db.add(new_purchase)  
         db.commit()    
         db.flush()
