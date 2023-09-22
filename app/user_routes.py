@@ -58,6 +58,7 @@ def delete_user(user):
         print(e)
         return jsonify({'message': 'somthing went wrong.'}), 500
 
+
 @app.route('/users/<user_id>', methods=['GET'])
 @add_cors_headers
 def get_user(user_id):  
@@ -66,7 +67,20 @@ def get_user(user_id):
         return jsonify({'message': 'user does not exists.'}), 404
     out = {'user': json.loads(json.dumps(user, cls=AlchemyEncoder))}
     out['user'].pop('password')
-    #out['user']['purchases'] = json.loads(json.dumps(user.purchases, cls=AlchemyEncoder))
-    #out['user']['events'] = json.loads(json.dumps(user.events, cls=AlchemyEncoder))
     return jsonify(out), 200
+
+
+@app.route('/users/<user_id>', methods=['PUT'])
+@add_cors_headers
+@token_required
+def update_event(user, user_id):  
+    data = request.get_json()  
+    try:
+        for k, v in data.items():
+            setattr(user, k, v)
+        db.commit()    
+        return jsonify({'message': 'user updated successfully'}), 200
+    except Exception as e:
+        print(e)
+        return jsonify({'message': 'somthing went wrong.'}), 500
 
