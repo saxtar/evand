@@ -12,6 +12,8 @@ class Config(object):
     S3_SECRET = os.environ['S3_SECRET']
     S3_BUCKET = os.environ['S3_BUCKET']
     S3_EP = os.environ['S3_EP']
+    PURCHASE_API_KEY = os.environ['PURCHASE_API_KEY']
+    HOST_URL = os.environ['HOST_URL']
 
 
 class ProductionConfig(Config):

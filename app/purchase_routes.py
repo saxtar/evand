@@ -1,5 +1,5 @@
 from flask import request, jsonify, Blueprint
-from . import db
+from . import db, purchase_api_key, host_url
 from .models import Purchases, Tickets, AlchemyEncoder
 from .helper import token_required, add_cors_headers
 import json
@@ -67,20 +67,27 @@ def delete_purchase(user, purchase_id):
         return jsonify({'message': 'somthing went wrong.'}), 500
 
 
-@app.route('/purchases/<purchase_id>', methods=['PUT'])
+@app.route('/purchases/<purchase_id>', methods=['GET'])
 @add_cors_headers
-@token_required
-def pay_purchase(user, purchase_id):  
-    data = request.get_json()  
-    err = validate_purchase_data(data) 
-    if err is not None:
-        return err
-
-    err = authorize_purchase(user, purchase_id)
-    if err is not None:
-        return err
+def pay_purchase(purchase_id):  
+    trans_id = request.args.get('trans_id')  
+    order_id = request.args.get('order_id')  
+    amount = request.args.get('amount')  
     
-    purchase = db.query(Purchases).filter_by(id=purchase_id, buyer_id=user.id).limit(1).first()
+    purchase = db.query(Purchases).filter_by(trans_id=trans_id, id=order_id, price=amount).limit(1).first()
+    if purchase is None:
+        return (jsonify({'message': 'purchase does not exists.'}), 404)
+    
+    url = "https://nextpay.org/nx/gateway/verify"
+    payload=f'api_key={purchase_api_key}&amount={amount}&trans_id={trans_id}'
+    headers = {
+        #'User-Agent': 'PostmanRuntime/7.26.8',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+    response = requests.request("POST", url, headers=headers, data=payload)
+    if response.status == -90:
+        return (jsonify({'message': 'purchase does not completed.'}), 500)
+
     try:
         purchase.is_paid = True 
         db.commit()    
@@ -99,8 +106,17 @@ def create_purchase(user):
     err = validate_purchase_data(data) 
     if err is not None:
         return err
+
+    ticket = db.query(Tickets).filter_by(id=data['ticket_id']).limit(1).first()   
     try:
-        new_purchase = Purchases(**data, buyer_id=user.id) 
+        price = ticket.price
+        url = "https://nextpay.org/nx/gateway/token"
+        payload='api_key={purchase_api_key}&amount={ticket.price}&order_id={new_purchase.id}&callback_uri={host_url}/purchases/{new_purchase.id}'
+        headers = {
+            #'User-Agent': 'PostmanRuntime/7.26.8',
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+        response = requests.request("POST", url, headers=headers, data=payload)
         db.add(new_purchase)  
         db.commit()    
         db.flush()

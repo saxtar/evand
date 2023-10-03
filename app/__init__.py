@@ -8,6 +8,8 @@ def init(app):
     global secret
     global s3
     global s3_bucket
+    global purchase_api_key
+    global host_url
     s3 = boto3.client(
         "s3",
         endpoint_url=app.config['S3_EP'],
@@ -18,5 +20,7 @@ def init(app):
     engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
     db = scoped_session(sessionmaker(autocommit=False,autoflush=False,bind=engine))
     secret =  app.config['SECRET_KEY']
+    purchase_api_key = app.config['PURCHASE_API_KEY']
+    host_url = app.config['HOST_URL']
     print("Initialized")
 
