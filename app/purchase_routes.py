@@ -46,8 +46,14 @@ def get_purchase(user, purchase_id):
 @token_required
 def get_user_purchases(user):  
     purchases = db.query(Purchases).filter_by(buyer_id=user.id).all()
-    out = {'purchases': [json.loads(json.dumps(p, cls=AlchemyEncoder)) for p in purchases]}
-    return jsonify(out), 200
+    #out = {'purchases': [json.loads(json.dumps(p, cls=AlchemyEncoder)) for p in purchases]}
+
+    purchase_list = []
+    for p in purchases:
+        new_p = json.loads(json.dumps(p, cls=AlchemyEncoder))
+        new_p['ticket'] = json.loads(json.dumps(p.ticket, cls=AlchemyEncoder))
+        purchase_list.append(new_p)
+    return jsonify({'purchases': purchase_list}), 200
 
 
 @app.route('/purchases/<purchase_id>', methods=['DELETE'])
