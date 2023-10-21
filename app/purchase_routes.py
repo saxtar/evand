@@ -51,7 +51,7 @@ def get_user_purchases(user):
     purchase_list = []
     for p in purchases:
         new_p = json.loads(json.dumps(p, cls=AlchemyEncoder))
-        new_p['ticket'] = json.loads(json.dumps(p.ticket, cls=AlchemyEncoder))
+        new_p['ticket'] = json.loads(json.dumps(p.ticket_id, cls=AlchemyEncoder))
         purchase_list.append(new_p)
     return jsonify({'purchases': purchase_list}), 200
 
@@ -77,6 +77,7 @@ def delete_purchase(user, purchase_id):
 @app.route('/purchases/<purchase_id>', methods=['GET'])
 @add_cors_headers
 def pay_purchase(purchase_id):  
+    print(request.args)
     trans_id = request.args.get('trans_id')  
     order_id = request.args.get('order_id')  
     amount = request.args.get('amount')  
@@ -111,6 +112,7 @@ def pay_purchase(purchase_id):
 def create_purchase(user):  
     data = request.get_json()
     err = validate_purchase_data(data) 
+    redirect_url = data.pop('redirect_url')
     if err is not None:
         return err
 
@@ -122,7 +124,9 @@ def create_purchase(user):
         db.flush()
         price = ticket.price
         url = "https://nextpay.org/nx/gateway/token"
-        payload=f'api_key={purchase_api_key}&amount={price}&order_id=85NX85s427&callback_uri={host_url}/purchases/{new_purchase.id}'.replace(':', '%3A').replace('/', '%2F')
+        custom_json = json.dumps({'redirect_url': redirect_url})
+        payload=f'api_key={purchase_api_key}&amount={price}&order_id=85NX85s427&custom_json_fields={custom_json}&callback_uri={host_url}/purchases/{new_purchase.id}'
+        #.replace(':', '%3A').replace('/', '%2F')
         print(payload)
         headers = {
             'User-Agent': 'PostmanRuntime/7.26.8',
