@@ -1,4 +1,4 @@
-from flask import request, jsonify, Blueprint
+from flask import request, jsonify, Blueprint, redirect
 import requests
 from . import db, purchase_api_key, host_url
 from .models import Purchases, Tickets, AlchemyEncoder
@@ -29,25 +29,11 @@ def authorize_purchase(user, purchase_id):
     return None
 
 
-@app.route('/purchases/<purchase_id>', methods=['GET'])
-@add_cors_headers
-@token_required
-def get_purchase(user, purchase_id):  
-    err = authorize_purchase(user, purchase_id)
-    if err is not None:
-        return err
-    
-    purchase = db.query(Purchases).filter_by(id=purchase_id, buyer_id=user.id).limit(1).first()
-    return jsonify({'purchase': purchase}), 200
-
-
 @app.route('/purchases', methods=['GET'])
 @add_cors_headers
 @token_required
 def get_user_purchases(user):  
     purchases = db.query(Purchases).filter_by(buyer_id=user.id).all()
-    #out = {'purchases': [json.loads(json.dumps(p, cls=AlchemyEncoder)) for p in purchases]}
-
     purchase_list = []
     for p in purchases:
         new_p = json.loads(json.dumps(p, cls=AlchemyEncoder))
@@ -75,35 +61,37 @@ def delete_purchase(user, purchase_id):
 
 
 @app.route('/purchases/<purchase_id>', methods=['GET'])
-@add_cors_headers
+#@add_cors_headers
 def pay_purchase(purchase_id):  
     print(request.args)
     trans_id = request.args.get('trans_id')  
     order_id = request.args.get('order_id')  
     amount = request.args.get('amount')  
     
-    purchase = db.query(Purchases).filter_by(id=order_id, price=amount).limit(1).first()
+    purchase = db.query(Purchases).filter_by(id=order_id).limit(1).first()
     if purchase is None:
         return (jsonify({'message': 'purchase does not exists.'}), 404)
     
+    ticket = db.query(Tickets).filter_by(id=purchase.ticket_id).limit(1).first()   
+    event_id = ticket.event_id
     url = "https://nextpay.org/nx/gateway/verify"
     payload=f'api_key={purchase_api_key}&amount={amount}&trans_id={trans_id}'
     headers = {
-        #'User-Agent': 'PostmanRuntime/7.26.8',
+        'User-Agent': 'PostmanRuntime/7.26.8',
         'Content-Type': 'application/x-www-form-urlencoded'
     }
     response = requests.request("POST", url, headers=headers, data=payload)
-    if response.json()['code'] == -90:
-        return (jsonify({'message': 'purchase does not completed.'}), 500)
-
     try:
-        purchase.is_paid = True 
-        db.commit()    
-        db.flush()
-        return jsonify({'message': 'purchase paid successfully'}), 200
+        if response.json()['code'] == 0:
+            purchase.is_paid = True 
+            db.commit()    
+            db.flush()
+            return redirect(f"https://rooydad.darkube.app/event/{event_id}?isPaid=true", code=302)
+        
+        return redirect(f"https://rooydad.darkube.app/event/{event_id}?isPaid=false", code=302)
     except Exception as e:
         print(e)
-        return jsonify({'message': 'something went wrong.'}), 500
+        return redirect(f"https://rooydad.darkube.app/event/{event_id}?isPaid=false", code=302)
 
 
 @app.route('/purchases', methods=['POST'])
@@ -125,7 +113,8 @@ def create_purchase(user):
         price = ticket.price
         url = "https://nextpay.org/nx/gateway/token"
         custom_json = json.dumps({'redirect_url': redirect_url})
-        payload=f'api_key={purchase_api_key}&amount={price}&order_id=85NX85s427&custom_json_fields={custom_json}&callback_uri={host_url}/purchases/{new_purchase.id}'
+        purchase_id = new_purchase.id
+        payload=f'api_key={purchase_api_key}&amount={price}&order_id={purchase_id}&custom_json_fields={custom_json}&callback_uri={host_url}/purchases/{new_purchase.id}'
         #.replace(':', '%3A').replace('/', '%2F')
         print(payload)
         headers = {
